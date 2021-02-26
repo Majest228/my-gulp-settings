@@ -1,102 +1,82 @@
-const {src,dest,watch,parallel} = require('gulp');
-const concat = require('gulp-concat');
-const scss = require('gulp-sass');
-const browserSync = require('browser-sync').create();
-const uglify = require('gulp-uglify-es').default;
-const autoprefixer = require('gulp-autoprefixer');
-const imagemin = require('gulp-imagemin');
-//search index.html
+const {
+	src,
+	dest,
+	parallel,
+	series,
+	watch
+} = require('gulp');
 
-const browsersync = () => {
-	browserSync.init({
+const project__folder = 'dist'
+source__folder = 'app',
+	gulp = require('gulp'),
+	browsersync = require('browser-sync').create(),
+	fileinclude = require('gulp-file-include'),
+	del = require('del'),
+	scss = require('gulp-sass'),
+	path = {
+		build: {
+			html: project__folder + '/',
+			css: project__folder + '/css/',
+			js: project__folder + '/js/',
+			images: project__folder + '/images/',
+			fonts: project__folder + '/fonts',
+		},
+		app: {
+			html: [source__folder + '/*.html', '!' + source__folder + '/_*.html'],
+			css: source__folder + '/scss/style.scss',
+			js: source__folder + '/js/main.js',
+			images: source__folder + '/images/**/*.{jpg,png,svg,gif,ico,webp}',
+			fonts: source__folder + '/fonts/*.ttf',
+		},
+		watch: {
+			html: source__folder + '/**/*.html',
+			css: source__folder + '/scss/**/*.scss',
+			js: source__folder + '/js/**/*.js',
+			images: source__folder + '/images/**/*.{jpg,png,svg,gif,ico,webp}',
+		},
+		clean: './' + project__folder + '/'
+	}
+
+const browserSync = () => {
+	browsersync.init({
 		server: {
-			baseDir: 'app/'
-		}
+			baseDir: './' + project__folder + '/'
+		},
+		port: 3000,
 	})
 }
 
-//
-
-//js -> min.js
-
-const forJs = () => {
-	return src([
-		'node_modules/jquery/dist/jquery.js',
-		'app/script/main.js'
-	])
-	.pipe(uglify())
-	.pipe(concat('main.min.js'))
-	.pipe(dest('app/script/'))
-	.pipe(browserSync.stream())
+const html = () => {
+	return src(path.app.html)
+		.pipe(fileinclude())
+		.pipe(dest(path.build.html))
+		.pipe(browsersync.stream())
+}
+const css = () => {
+	return src(path.app.css)
+		.pipe(scss({
+			outputStyle : 'compressed'
+		}))
+		.pipe(dest(path.build.css))
+		.pipe(browsersync.stream())
+}
+const watchFiles = () => {
+	watch([
+		path.watch.html
+	], html),
+	watch([
+		path.watch.css
+	], css)
+}
+const clean = () => {
+	return del(path.clean)
 }
 
-//
+const build = series(clean,parallel(css,html))
+const start = parallel(watchFiles, build, browserSync);
 
-//scss -> css
-
-const forScss = () => {
-	return src('app/scss/style.scss') //link to your scss file
-	.pipe(scss({outputStyle : 'compressed'})) //view of your min.css style
-	.pipe(concat('style.min.css'))//create style.min.css
-	.pipe(autoprefixer({
-		overrideBrowserslist : ['last 10 version'],
-		grid: true												//webkit 
-	}))
-	.pipe(dest('app/css'))//five save path
-	.pipe(browserSync.stream())//using browserSync
-}
-
-//
-
-//images
-
-const images = () => {
-	return src('app/images/**/*')
-	.pipe(imagemin([
-		imagemin.gifsicle({interlaced: true}),
-		imagemin.mozjpeg({quality: 75, progressive: true}),
-		imagemin.optipng({optimizationLevel: 5}),
-		imagemin.svgo({
-			 plugins: [
-				  {removeViewBox: true},
-				  {cleanupIDs: false}
-			 ]
-		})
-  ]))
-  .pipe(dest('dist/images'))}
-
-//
-
-//building project
-
-const building = () => {
-	return src([
-		'app/css/style.min.css',
-		'app/script/main.min.js',
-		'app/fonts/**/*',
-		'app/*.html'
-	], {base: 'app'})
-	.pipe(dest('dist'))
-}
-
-//
-
-//function start full project
-const start = () => {
-	watch(['app/scss/**/*.scss'],forScss)
-	watch(['app/script/**/*.js','!app/script/main.min.js'],forJs)
-	watch(['app/*.html']).on('change', browserSync.reload)
-}
-
-//function export
-
-exports.forScss = forScss;
+exports.css = css;
+exports.build = build;
+exports.html = html;
 exports.start = start;
-exports.browsersync = browsersync;
-exports.forJs = forJs;
-exports.building = building;
-exports.images = images;
-
-exports.default = parallel(forJs,browsersync,start)
-
-//
+exports.default = start;
