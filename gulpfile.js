@@ -4,7 +4,7 @@ const scss = require('gulp-sass');
 const browserSync = require('browser-sync').create();
 const uglify = require('gulp-uglify-es').default;
 const autoprefixer = require('gulp-autoprefixer');
-
+const imagemin = require('gulp-imagemin');
 //search index.html
 
 const browsersync = () => {
@@ -47,6 +47,26 @@ const forScss = () => {
 }
 
 //
+
+//images
+
+const images = () => {
+	return src('app/images/**/*')
+	.pipe(imagemin([
+		imagemin.gifsicle({interlaced: true}),
+		imagemin.mozjpeg({quality: 75, progressive: true}),
+		imagemin.optipng({optimizationLevel: 5}),
+		imagemin.svgo({
+			 plugins: [
+				  {removeViewBox: true},
+				  {cleanupIDs: false}
+			 ]
+		})
+  ]))
+  .pipe(dest('dist/images'))}
+
+//
+
 //building project
 
 const building = () => {
@@ -75,6 +95,7 @@ exports.start = start;
 exports.browsersync = browsersync;
 exports.forJs = forJs;
 exports.building = building;
+exports.images = images;
 
 exports.default = parallel(forJs,browsersync,start)
 
