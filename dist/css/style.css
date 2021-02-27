@@ -1,1 +1,8 @@
-body{color:red}
+body {
+  color: red;
+}
+
+body .test {
+  margin: 0;
+  padding: 0;
+}

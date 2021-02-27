@@ -17,6 +17,10 @@ const project__folder = 'dist',
 	gcmq = require('gulp-group-css-media-queries'),
 	cleanCSS = require('gulp-clean-css'),
 	uglifyEs = require('gulp-uglify-es').default,
+	imagemin = require('gulp-imagemin'),
+	// webp = require('gulp-webp'),
+	// webpforhtml = require('gulp-webp-html'),
+	// svgsprite = require('gulp-svg-sprite')
 	path = {
 		build: {
 			html: project__folder + '/',
@@ -27,7 +31,7 @@ const project__folder = 'dist',
 		},
 		app: {
 			html: [source__folder + '/*.html', '!' + source__folder + '/_*.html'],
-			css: source__folder + '/scss/style.scss',
+			css: source__folder + '/scss/**/*.scss',
 			js: source__folder + '/script/main.js',
 			images: source__folder + '/images/**/*.{jpg,png,svg,gif,ico,webp}',
 			fonts: source__folder + '/fonts/*.ttf',
@@ -60,15 +64,15 @@ const html = () => {
 
 const css = () => {
 	return src(path.app.css)
-		.pipe(scss({
-			outputStyle : 'compressed'
+	.	pipe(scss({
+		outputStyle : 'compressed'
 		}))
-		.pipe(dest(path.build.css))
-		.pipe(autoPrefixer({
+		.pipe(gcmq())
+			.pipe(autoPrefixer({
 			overrideBrowserslist : ['last 10 versions'],
 			cascade : true
 		}))
-		.pipe(gcmq())
+		.pipe(dest(path.build.css))
 		.pipe(cleanCSS())
 		.pipe(rename({
 			extname : '.min.css'
@@ -88,6 +92,22 @@ const js = () => {
 		.pipe(dest(path.build.js))
 		.pipe(browsersync.stream())
 }
+const images = () => {
+	return src(path.app.images) 
+		.pipe(imagemin([
+			imagemin.gifsicle({interlaced: true}),
+			imagemin.mozjpeg({quality: 75, progressive: true}),
+			imagemin.optipng({optimizationLevel: 5}),
+			imagemin.svgo({
+				plugins: [
+					{removeViewBox: true},
+					{cleanupIDs: false}
+				]
+			})
+		]))
+		.pipe(dest(path.build.images))
+		.pipe(browsersync.stream())
+}
 
 const watchFiles = () => {
 	watch([
@@ -98,18 +118,23 @@ const watchFiles = () => {
 	], css),
 	watch([
 		path.watch.js
-	], js)
+	], js),
+	watch([
+		path.watch.images
+	], images)
 }
 const clean = () => {
 	return del(path.clean)
 }
 
-const build = series(clean,parallel(js,css,html));
+const build = series(clean,parallel(js,css,html,images));
 const start = parallel(watchFiles, build, browserSync);
 
+exports.images = images;
 exports.js = js;
 exports.css = css;
 exports.build = build;
 exports.html = html;
 exports.start = start;
 exports.default = start;
+
